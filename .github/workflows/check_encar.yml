@@ -1,0 +1,41 @@
+name: Encar new listings check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore seen listings state
+        uses: actions/cache/restore@v4
+        with:
+          path: seen_ids.json
+          key: encar-seen-ids-${{ github.run_id }}
+          restore-keys: |
+            encar-seen-ids-
+
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENCAR_API_URL: ${{ secrets.ENCAR_API_URL }}
+        run: python bot.py
+
+      - name: Save seen listings state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: seen_ids.json
+          key: encar-seen-ids-${{ github.run_id }}
